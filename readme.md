@@ -1,4 +1,4 @@
-# Eldrow
+# [Eldrow](https://www.janestreet.com/puzzles/current-puzzle/)
 
 ## Wordle
 The daily puzzle game Wordle has taken the world by storm! Wordlers try to track down the mystery five-letter word in as few guesses as possible each day, with each guess returning the information of whether its letters are:
