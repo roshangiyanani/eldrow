@@ -1,5 +1,5 @@
 from pathlib import Path
-from eldrow.__lib__ import load_words
+from eldrow.lib import load_words
 
 import logging
 
