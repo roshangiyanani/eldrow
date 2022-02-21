@@ -55,3 +55,10 @@ def test_greens_and_yellows():
 
     result = w.make_guess("AGORA")
     assert CharResult.to_string(result) == "GXXXY"
+
+
+def test_hard_mode():
+    w = Wordle("ABATE", True)
+
+    w.make_guess("ABBEY")
+    assert not w.is_valid_hard_mode_guess("AGORA")
