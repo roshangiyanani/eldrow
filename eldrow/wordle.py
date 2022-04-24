@@ -2,7 +2,15 @@ from __future__ import annotations
 from collections import Counter, defaultdict
 from dataclasses import dataclass
 from enum import Enum
-from typing import Dict, FrozenSet, Iterable, List, Mapping, Optional, Sequence, Set
+from typing import (
+    Dict,
+    Iterable,
+    Iterator,
+    List,
+    Optional,
+    Sequence,
+    Set,
+)
 
 
 class CharResult(Enum):
@@ -11,7 +19,7 @@ class CharResult(Enum):
     Green = "G"
 
     @staticmethod
-    def to_string(results: Sequence["CharResult"]) -> str:
+    def to_string(results: Iterator[CharResult]) -> str:
         return "".join((r.value for r in results))
 
 

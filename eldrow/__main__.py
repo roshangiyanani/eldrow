@@ -2,7 +2,7 @@ import logging
 from pathlib import Path
 import random
 
-from eldrow.lib import load_words
+from eldrow.lib import colored_text, load_words
 from eldrow.wordle import CharResult, Wordle
 
 logging.basicConfig(level=logging.INFO)
@@ -21,6 +21,6 @@ count = 0
 for word in consideration_set:
     count += 1
     result = wordle.make_guess(word)
-    print(f"({count}) {word}: {''.join(cr.value for cr in result)}")
+    print(f"({count}) {colored_text(word, result)}")
     if all(cr == CharResult.Green for cr in result):
         break
