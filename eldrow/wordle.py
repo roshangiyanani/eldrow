@@ -1,7 +1,8 @@
+from __future__ import annotations
 from collections import Counter, defaultdict
 from dataclasses import dataclass
 from enum import Enum
-from typing import Dict, List, Mapping, Optional, Sequence, Set
+from typing import Dict, FrozenSet, Iterable, List, Mapping, Optional, Sequence, Set
 
 
 class CharResult(Enum):
@@ -19,6 +20,34 @@ class Constraint:
     min_count: int
     min_is_exact: bool
     known_positions: Set[int]
+
+    def update(self, u: Constraint):
+        if u.min_count > self.min_count:
+            assert not self.min_is_exact
+            self.min_count = u.min_count
+            self.min_is_exact = u.min_is_exact
+        elif u.min_count == self.min_count:
+            self.min_is_exact = self.min_is_exact or u.min_is_exact
+        else:
+            assert not u.min_is_exact
+
+        self.known_positions.update(u.known_positions)
+
+    @staticmethod
+    def from_result(indexes: Iterable[int], result: Sequence[CharResult]) -> Constraint:
+        char_results = Counter(result[index] for index in indexes)
+
+        min_count = char_results[CharResult.Green] + char_results[CharResult.Yellow]
+        min_is_exact = bool(char_results[CharResult.Gray])
+        known_positions = {
+            index for index in indexes if result[index] == CharResult.Green
+        }
+
+        return Constraint(
+            min_count=min_count,
+            min_is_exact=min_is_exact,
+            known_positions=known_positions,
+        )
 
 
 class Wordle:
@@ -58,14 +87,12 @@ class Wordle:
                 result[index] = CharResult.Yellow
                 overlap[guessed] -= 1
 
-        self._update_constraints(guess, guess_char_counts, result)
-
+        self._update_constraints(guess, result)
         return result
 
     def _update_constraints(
         self,
         guess: str,
-        guess_char_counts: Counter,
         result: Sequence[CharResult],
     ):
         char_indexes: Dict[str, Set[int]] = defaultdict(set)
@@ -73,30 +100,13 @@ class Wordle:
             char_indexes[char].add(index)
 
         for char, indexes in char_indexes.items():
-            constraint = self._constraints.get(char)
-            char_results = Counter(result[index] for index in indexes)
+            old_constraint = self._constraints.get(char)
+            new_constraint = Constraint.from_result(indexes, result)
 
-            min_count = char_results[CharResult.Green] + char_results[CharResult.Yellow]
-            min_is_exact = bool(char_results[CharResult.Gray])
-            known_positions = (
-                index for index in indexes if result[index] == CharResult.Green
-            )
-
-            if constraint:
-                if min_count > constraint.min_count:
-                    assert not min_is_exact
-                    constraint.min_count = min_count
-                    constraint.min_is_exact = min_is_exact
-                elif min_count == constraint.min_count:
-                    constraint.min_is_exact = min_is_exact or constraint.min_is_exact
-                else:
-                    assert not min_is_exact
-
-                for known_position in known_positions:
-                    constraint.known_positions.add(known_position)
+            if old_constraint:
+                old_constraint.update(new_constraint)
             else:
-                constraint = Constraint(min_count, min_is_exact, set(known_positions))
-                self._constraints[char] = constraint
+                self._constraints[char] = new_constraint
 
     def is_valid_hard_mode_guess(self, guess: str) -> bool:
         if not guess:
