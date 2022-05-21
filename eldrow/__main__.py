@@ -22,5 +22,5 @@ for word in consideration_set:
     count += 1
     result = wordle.make_guess(word)
     print(f"({count}) {colored_text(word, result)}")
-    if all(cr == CharResult.Green for cr in result):
+    if CharResult.all_correct(result):
         break

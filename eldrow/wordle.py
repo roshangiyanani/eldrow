@@ -22,6 +22,10 @@ class CharResult(Enum):
     def to_string(results: Iterator[CharResult]) -> str:
         return "".join((r.value for r in results))
 
+    @staticmethod
+    def all_correct(results: Iterator[CharResult]) -> bool:
+        return all(cr == CharResult.Green for cr in results)
+
 
 @dataclass()
 class Constraint:
