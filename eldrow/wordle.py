@@ -67,24 +67,40 @@ class Wordle:
         if not word:
             raise ValueError("cannot have empty word")
 
-        self._hard_mode = hard_mode
+        self._hard_mode = bool(hard_mode)
         self._word = word.casefold()
         self._char_counts = Counter(self._word)
         self._constraints: Dict[str, Constraint] = dict()
 
+    def is_legal(self, guess: str) -> bool:
+        guess = guess.casefold()
+        char_counts = Counter(guess)
+        if len(guess) != len(self._word):
+            return False
+
+        if self._hard_mode:
+            for char, constraint in self._constraints.items():
+                count = char_counts[char]
+                wrong_count = (
+                    count != constraint.min_count
+                    if constraint.min_is_exact
+                    else count < constraint.min_count
+                )
+                missing_known_positions = any(
+                    guess[index] != char for index in constraint.known_positions
+                )
+                if wrong_count or missing_known_positions:
+                    return False
+
+        return True
+
     def make_guess(self, guess: str) -> List[CharResult]:
         if not guess:
-            raise ValueError("cannot have an empty guess")
+            raise ValueError("cannot guess empty word")
 
         guess = guess.casefold()
-        if len(guess) != len(self._word):
-            raise ValueError("guess does not match word length")
-
         guess_char_counts = Counter(guess)
-        if self._hard_mode and not self._is_valid_hard_mode_guess(
-            guess, guess_char_counts
-        ):
-            raise ValueError("invalid hard mode guess")
+        self._verify_is_legal(guess, guess_char_counts)
 
         result = [CharResult.Gray for _ in range(len(self._word))]
         overlap = self._char_counts & guess_char_counts
@@ -102,11 +118,7 @@ class Wordle:
         self._update_constraints(guess, result)
         return result
 
-    def _update_constraints(
-        self,
-        guess: str,
-        result: Sequence[CharResult],
-    ):
+    def _update_constraints(self, guess: str, result: Sequence[CharResult]) -> None:
         char_indexes: Dict[str, Set[int]] = defaultdict(set)
         for index, char in enumerate(guess):
             char_indexes[char].add(index)
@@ -120,30 +132,41 @@ class Wordle:
             else:
                 self._constraints[char] = new_constraint
 
-    def is_valid_hard_mode_guess(self, guess: str) -> bool:
+    def _verify_is_legal(self, guess: str, char_counts: Counter[str]) -> None:
         if not guess:
             raise ValueError("cannot have an empty guess")
 
-        guess = guess.casefold()
         if len(guess) != len(self._word):
-            raise ValueError("guess does not match word length")
-
-        character_counts = Counter(guess)
-        return self._is_valid_hard_mode_guess(guess, character_counts)
-
-    def _is_valid_hard_mode_guess(self, guess: str, char_counts: Counter) -> bool:
-        for char, constraint in self._constraints.items():
-            count = char_counts[char]
-            wrong_count = (
-                count != constraint.min_count
-                if constraint.min_is_exact
-                else count < constraint.min_count
+            raise ValueError(
+                f"guess ({guess}) does not match word length ({len(self._word)})"
             )
-            missing_known_positions = any(
-                self._word[index] != guess[index]
-                for index in constraint.known_positions
-            )
-            if wrong_count or missing_known_positions:
-                return False
 
-        return True
+        if self._hard_mode:
+            for char, constraint in self._constraints.items():
+                count = char_counts[char]
+                if constraint.min_is_exact and count != constraint.min_count:
+                    raise ValueError(
+                        "count of '%s' in '%s' (%d) does not match known count (%d)",
+                        char,
+                        guess,
+                        count,
+                        constraint.min_count,
+                    )
+                elif count < constraint.min_count:
+                    raise ValueError(
+                        "count of '%s' in '%s' (%d) does not meet minimum count (%d)",
+                        char,
+                        guess,
+                        count,
+                        constraint.min_count,
+                    )
+
+                for index in constraint.known_positions:
+                    if guess[index] != char:
+                        raise ValueError(
+                            "char %d ('%s') in '%s' does not match known char '%s'",
+                            index,
+                            guess[index],
+                            guess,
+                            char,
+                        )

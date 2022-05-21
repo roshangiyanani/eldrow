@@ -61,6 +61,6 @@ def test_hard_mode():
     w = Wordle("ABATE", True)
 
     assert CharResult.to_string(w.make_guess("ABBEY")) == "GGXYX"
-    assert not w.is_valid_hard_mode_guess("AGORA")
-    assert not w.is_valid_hard_mode_guess("ABACK")
+    assert not w.is_legal("AGORA")
+    assert not w.is_legal("ABACK")
     assert all(r == CharResult.Green for r in w.make_guess("ABATE"))
