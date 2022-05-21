@@ -1,12 +1,14 @@
+from datetime import timedelta
 import logging
-import random
 from pathlib import Path
+import random
+from time import perf_counter_ns
 
 from eldrow.lib import load_words
 from eldrow.wordle import Wordle
-from eldrow.strategies import execute_strategy, exhaustive_guess
+from eldrow.strategies import *
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger()
 
 word_path = Path("./wordlist.csv")
@@ -15,7 +17,16 @@ logging.info(f"loaded {len(words)} words from {word_path}")
 
 random_word = random.choice(words)
 logging.info(f'randomly chose: "{random_word}"')
-wordle = Wordle(random_word)
 
-strat = exhaustive_guess(words)
-execute_strategy(wordle, strat)
+strategies = {
+    "exhaustive_guess": exhaustive_guess(words),
+    "legal_hard_mode_guess": legal_hard_mode_guess(words),
+}
+
+for name, strat in strategies.items():
+    wordle = Wordle(random_word)
+    start = perf_counter_ns()
+    count = execute_strategy(wordle, strat)
+    end = perf_counter_ns()
+    elapsed = timedelta(microseconds=(end - start) / 1000)
+    logger.info("strategy '%s' took '%d' guesses and %s", name, count, elapsed)
