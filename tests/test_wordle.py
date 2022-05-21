@@ -4,13 +4,7 @@ from eldrow.wordle import Wordle, CharResult
 def test_correct():
     w = Wordle("ABATE")
 
-    result = w.make_guess("abate")
-    assert CharResult.all_correct(result)
-
     result = w.make_guess("ABATE")
-    assert CharResult.all_correct(result)
-
-    result = w.make_guess("AbAtE")
     assert CharResult.all_correct(result)
 
 

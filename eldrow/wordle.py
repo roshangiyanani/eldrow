@@ -68,12 +68,11 @@ class Wordle:
             raise ValueError("cannot have empty word")
 
         self._hard_mode = bool(hard_mode)
-        self._word = word.casefold()
-        self._char_counts = Counter(self._word)
+        self._word = word
+        self._char_counts = Counter(word)
         self._constraints: Dict[str, Constraint] = dict()
 
     def is_legal(self, guess: str) -> bool:
-        guess = guess.casefold()
         char_counts = Counter(guess)
         if len(guess) != len(self._word):
             return False
@@ -98,7 +97,6 @@ class Wordle:
         if not guess:
             raise ValueError("cannot guess empty word")
 
-        guess = guess.casefold()
         guess_char_counts = Counter(guess)
         self._verify_is_legal(guess, guess_char_counts)
 

@@ -8,6 +8,9 @@ from eldrow.wordle import CharResult
 
 def load_words(path: Path) -> Sequence[str]:
     words = path.read_text().splitlines()
+    for i in range(len(words)):
+        words[i] = words[i].casefold()
+
     words.sort()
     return words
 
