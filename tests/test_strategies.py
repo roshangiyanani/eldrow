@@ -1,7 +1,7 @@
 from random import choice
 
-from eldrow.wordle import Wordle
-from eldrow.strategies import *
+from wordle.wordle import Wordle
+from wordle.strategies import *
 
 vocabulary = ["ALPHA", "OMEGA", "TROPE", "MOVIE", "CROWD", "FROZE", "OZONE", "HEELS"]
 word = choice(vocabulary)

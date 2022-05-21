@@ -4,9 +4,9 @@ from pathlib import Path
 import random
 from time import perf_counter_ns
 
-from eldrow.lib import load_words
-from eldrow.wordle import Wordle
-from eldrow.strategies import *
+from wordle.lib import load_words
+from wordle.wordle import Wordle
+from wordle.strategies import *
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger()

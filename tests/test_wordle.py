@@ -1,4 +1,4 @@
-from eldrow.wordle import Wordle, CharResult
+from wordle.wordle import Wordle, CharResult
 
 
 def test_correct():

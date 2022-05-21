@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "eldrow"
+name = "wordle"
 version = "0.1.0"
 description = ""
 authors = ["Roshan Giyanani <roshangiyanani@gmail.com>"]

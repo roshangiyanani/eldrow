@@ -3,7 +3,7 @@ from typing import Sequence
 
 from termcolor import colored
 
-from eldrow.wordle import CharResult
+from wordle.wordle import CharResult
 
 
 def load_words(path: Path) -> Sequence[str]:

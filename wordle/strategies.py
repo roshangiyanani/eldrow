@@ -9,8 +9,8 @@ from logging import getLogger
 import random
 from typing import Sequence, Collection, Generator, Dict, Set
 
-from eldrow.lib import colored_text
-from eldrow.wordle import CharResult, Wordle, Constraint
+from wordle.lib import colored_text
+from wordle.wordle import CharResult, Wordle, Constraint
 
 logger = getLogger(__name__)
 
