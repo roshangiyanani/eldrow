@@ -7,7 +7,9 @@ from eldrow.wordle import CharResult
 
 
 def load_words(path: Path) -> Sequence[str]:
-    return path.read_text().splitlines()
+    words = path.read_text().splitlines()
+    words.sort()
+    return words
 
 
 def colored_text(word: str, results: Sequence[CharResult]) -> str:

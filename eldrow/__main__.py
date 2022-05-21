@@ -1,9 +1,10 @@
 import logging
-from pathlib import Path
 import random
+from pathlib import Path
 
-from eldrow.lib import colored_text, load_words
-from eldrow.wordle import CharResult, Wordle
+from eldrow.lib import load_words
+from eldrow.wordle import Wordle
+from eldrow.strategies import execute_strategy, exhaustive_guess
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger()
@@ -15,12 +16,6 @@ logging.info(f"loaded {len(words)} words from {word_path}")
 random_word = random.choice(words)
 logging.info(f'randomly chose: "{random_word}"')
 wordle = Wordle(random_word)
-consideration_set = set(words)
 
-count = 0
-for word in consideration_set:
-    count += 1
-    result = wordle.make_guess(word)
-    print(f"({count}) {colored_text(word, result)}")
-    if CharResult.all_correct(result):
-        break
+strat = exhaustive_guess(words)
+execute_strategy(wordle, strat)
