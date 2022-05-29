@@ -143,28 +143,10 @@ class Wordle:
             for char, constraint in self._constraints.items():
                 count = char_counts[char]
                 if constraint.min_is_exact and count != constraint.min_count:
-                    raise ValueError(
-                        "count of '%s' in '%s' (%d) does not match known count (%d)",
-                        char,
-                        guess,
-                        count,
-                        constraint.min_count,
-                    )
+                    raise ValueError(f"count of '{char}' in '{guess}' ({count}) does not match known count ({constraint.min_count})")
                 elif count < constraint.min_count:
-                    raise ValueError(
-                        "count of '%s' in '%s' (%d) does not meet minimum count (%d)",
-                        char,
-                        guess,
-                        count,
-                        constraint.min_count,
-                    )
+                    raise ValueError(f"count of '{char}' in '{guess}' ({count}) does not meet minimum count ({constraint.min_count})")
 
                 for index in constraint.known_positions:
                     if guess[index] != char:
-                        raise ValueError(
-                            "char %d ('%s') in '%s' does not match known char '%s'",
-                            index,
-                            guess[index],
-                            guess,
-                            char,
-                        )
+                        raise ValueError(f"char {index} ('{guess[index]}') in '{guess}' does not match known char '{char}'")
