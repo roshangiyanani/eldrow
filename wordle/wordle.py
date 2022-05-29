@@ -2,6 +2,7 @@ from __future__ import annotations
 from collections import Counter, defaultdict
 from dataclasses import dataclass
 from enum import Enum
+from functools import cache
 from typing import (
     Dict,
     Iterable,
@@ -62,6 +63,11 @@ class Constraint:
         )
 
 
+@cache
+def counter(word: str) -> Counter[str]:
+    return Counter(word)
+
+
 class Wordle:
     def __init__(self, word: str, hard_mode: Optional[bool] = False):
         if not word:
@@ -69,11 +75,11 @@ class Wordle:
 
         self._hard_mode = bool(hard_mode)
         self._word = word
-        self._char_counts = Counter(word)
+        self._char_counts = counter(word)
         self._constraints: Dict[str, Constraint] = dict()
 
     def is_legal(self, guess: str) -> bool:
-        char_counts = Counter(guess)
+        char_counts = counter(guess)
         if len(guess) != len(self._word):
             return False
 
@@ -97,7 +103,7 @@ class Wordle:
         if not guess:
             raise ValueError("cannot guess empty word")
 
-        guess_char_counts = Counter(guess)
+        guess_char_counts = counter(guess)
         self._verify_is_legal(guess, guess_char_counts)
 
         result = [CharResult.Gray for _ in range(len(self._word))]
