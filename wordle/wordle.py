@@ -1,5 +1,6 @@
 from __future__ import annotations
 from collections import Counter, defaultdict
+from copy import copy
 from dataclasses import dataclass
 from enum import Enum
 from functools import cache
@@ -11,6 +12,9 @@ from typing import (
     Optional,
     Sequence,
     Set,
+    Tuple,
+    Collection,
+    Mapping,
 )
 
 
@@ -50,6 +54,30 @@ class Constraint:
         assert self.known_positions.isdisjoint(self.known_not_positions)
 
     @staticmethod
+    def merge(a: Constraint, b: Constraint) -> Constraint:
+        if a.min_count > b.min_count:
+            assert not b.min_is_exact
+            min_count = a.min_count
+            min_is_exact = a.min_is_exact
+        elif a.min_count == b.min_count:
+            min_count = a.min_count
+            min_is_exact = a.min_is_exact or b.min_is_exact
+        else:
+            assert not a.min_is_exact
+            min_count = b.min_count
+            min_is_exact = b.min_is_exact
+
+        known_positions = a.known_positions | b.known_positions
+        known_not_positions = a.known_not_positions | b.known_not_positions
+        assert known_positions.isdisjoint(known_not_positions)
+        return Constraint(
+            min_count=min_count,
+            min_is_exact=min_is_exact,
+            known_positions=known_positions,
+            known_not_positions=known_not_positions,
+        )
+
+    @staticmethod
     def from_result(indexes: Iterable[int], result: Sequence[CharResult]) -> Constraint:
         char_results = Counter(result[index] for index in indexes)
 
@@ -73,6 +101,14 @@ class Constraint:
 @cache
 def counter(word: str) -> Counter[str]:
     return Counter(word)
+
+
+@cache
+def build_char_indexes(guess: str) -> Mapping[str, Collection[int]]:
+    char_indexes: Dict[str, Set[int]] = defaultdict(set)
+    for index, char in enumerate(guess):
+        char_indexes[char].add(index)
+    return char_indexes
 
 
 class Wordle:
@@ -113,7 +149,7 @@ class Wordle:
 
         return True
 
-    def make_guess(self, guess: str) -> List[CharResult]:
+    def _make_guess(self, guess: str) -> List[CharResult]:
         if not guess:
             raise ValueError("cannot guess empty word")
 
@@ -133,20 +169,36 @@ class Wordle:
                 result[index] = CharResult.Yellow
                 overlap[guessed] -= 1
 
-        self._update_constraints(guess, result)
         return result
 
-    def _update_constraints(self, guess: str, result: Sequence[CharResult]) -> None:
-        char_indexes: Dict[str, Set[int]] = defaultdict(set)
-        for index, char in enumerate(guess):
-            char_indexes[char].add(index)
+    def make_guess(self, guess: str) -> List[CharResult]:
+        result = self._make_guess(guess)
+        self._update_constraints(guess, result, mutate_inner=True)
+        return result
+
+    def copy_make_guess(self, guess: str) -> Tuple[Wordle, List[CharResult]]:
+        result = self._make_guess(guess)
+        c = Wordle(self._word, self._hard_mode)
+        c._constraints = copy(self._constraints)
+        c._update_constraints(guess, result, mutate_inner=False)
+        return c, result
+
+    def _update_constraints(
+        self, guess: str, result: Sequence[CharResult], mutate_inner
+    ) -> None:
+        char_indexes = build_char_indexes(guess)
 
         for char, indexes in char_indexes.items():
             old_constraint = self._constraints.get(char)
             new_constraint = Constraint.from_result(indexes, result)
 
             if old_constraint:
-                old_constraint.update(new_constraint)
+                if mutate_inner:
+                    old_constraint.update(new_constraint)
+                else:
+                    self._constraints[char] = Constraint.merge(
+                        old_constraint, new_constraint
+                    )
             else:
                 self._constraints[char] = new_constraint
 

@@ -22,8 +22,7 @@ def worst_solve(wordle: Wordle, possibilities: Set[str]) -> List[str]:
 
     worst_guesses: List[str] = list()
     for possibility in possibilities:
-        modified_wordle = deepcopy(wordle)
-        result = modified_wordle.make_guess(possibility)
+        modified_wordle, result = wordle.copy_make_guess(possibility)
         if CharResult.all_correct(result):
             # this can't be the worst solve, since there's at least one other word to try first
             continue
