@@ -33,6 +33,7 @@ class Constraint:
     min_count: int
     min_is_exact: bool
     known_positions: Set[int]
+    known_not_positions: Set[int]
 
     def update(self, u: Constraint):
         if u.min_count > self.min_count:
@@ -45,6 +46,8 @@ class Constraint:
             assert not u.min_is_exact
 
         self.known_positions.update(u.known_positions)
+        self.known_not_positions.update(u.known_not_positions)
+        assert self.known_positions.isdisjoint(self.known_not_positions)
 
     @staticmethod
     def from_result(indexes: Iterable[int], result: Sequence[CharResult]) -> Constraint:
@@ -55,11 +58,15 @@ class Constraint:
         known_positions = {
             index for index in indexes if result[index] == CharResult.Green
         }
+        known_not_positions = {
+            index for index in indexes if result[index] != CharResult.Green
+        }
 
         return Constraint(
             min_count=min_count,
             min_is_exact=min_is_exact,
             known_positions=known_positions,
+            known_not_positions=known_not_positions,
         )
 
 
@@ -94,7 +101,14 @@ class Wordle:
                 missing_known_positions = any(
                     guess[index] != char for index in constraint.known_positions
                 )
-                if wrong_count or missing_known_positions:
+                present_known_not_positions = any(
+                    guess[index] == char for index in constraint.known_not_positions
+                )
+                if (
+                    wrong_count
+                    or missing_known_positions
+                    or present_known_not_positions
+                ):
                     return False
 
         return True
@@ -149,10 +163,22 @@ class Wordle:
             for char, constraint in self._constraints.items():
                 count = char_counts[char]
                 if constraint.min_is_exact and count != constraint.min_count:
-                    raise ValueError(f"count of '{char}' in '{guess}' ({count}) does not match known count ({constraint.min_count})")
+                    raise ValueError(
+                        f"count of '{char}' in '{guess}' ({count}) does not match known count ({constraint.min_count})"
+                    )
                 elif count < constraint.min_count:
-                    raise ValueError(f"count of '{char}' in '{guess}' ({count}) does not meet minimum count ({constraint.min_count})")
+                    raise ValueError(
+                        f"count of '{char}' in '{guess}' ({count}) does not meet minimum count ({constraint.min_count})"
+                    )
 
                 for index in constraint.known_positions:
                     if guess[index] != char:
-                        raise ValueError(f"char {index} ('{guess[index]}') in '{guess}' does not match known char '{char}'")
+                        raise ValueError(
+                            f"char {index} ('{guess[index]}') in '{guess}' does not match known char '{char}'"
+                        )
+
+                for index in constraint.known_not_positions:
+                    if guess[index] == char:
+                        raise ValueError(
+                            f"char {index} ('{guess[index]}') in '{guess}' is known as wrong"
+                        )

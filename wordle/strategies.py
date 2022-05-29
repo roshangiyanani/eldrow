@@ -2,6 +2,7 @@ __all__ = [
     "execute_strategy",
     "exhaustive_guess",
     "legal_hard_mode_guess",
+    "Strategy",
 ]
 
 from collections import defaultdict, Counter
@@ -70,7 +71,10 @@ class _HardModeConstraintTracker:
             missing_known_positions = any(
                 guess[index] != char for index in constraint.known_positions
             )
-            if wrong_count or missing_known_positions:
+            present_known_not_positions = any(
+                guess[index] == char for index in constraint.known_not_positions
+            )
+            if wrong_count or missing_known_positions or present_known_not_positions:
                 return False
 
         return True
