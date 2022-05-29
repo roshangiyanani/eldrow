@@ -22,9 +22,14 @@ def worst_solve(wordle: Wordle, possibilities: Set[str]) -> List[str]:
             continue
 
         modified_possibilities = {word for word in possibilities if modified_wordle.is_legal(word)}
+        if len(modified_possibilities) + 1 <= len(worst_guesses):
+            # this can only match the worst solve, since there's not enough words to try
+            continue
+
         solve = worst_solve(modified_wordle, modified_possibilities)
         if len(worst_guesses) < len(solve) + 1:
-            worst_guesses = [possibility] + solve
+            solve.append(possibility)
+            worst_guesses = solve
 
     return worst_guesses
 
@@ -55,7 +60,7 @@ if __name__ == "__main__":
         end = perf_counter_ns()
         elapsed = timedelta(microseconds=(end - start) / 1000)
 
-        colored_ws = ", ".join(colored_text(w, wordle.make_guess(w)) for w in ws)
+        colored_ws = ", ".join(colored_text(w, wordle.make_guess(w)) for w in reversed(ws))
         logger.info("calculated worst solve for word %s (%d guesses) in %s: %s", word, len(ws), elapsed, colored_ws)
 
         if len(worst_guesses) < len(ws):
@@ -66,5 +71,5 @@ if __name__ == "__main__":
     g_elapsed = timedelta(microseconds=(g_end-g_start) / 1000)
 
     wordle = Wordle(worst_word, hard_mode=True)
-    colored_worst_guesses = ", ".join(colored_text(w, wordle.make_guess(w)) for w in worst_guesses)
+    colored_worst_guesses = ", ".join(colored_text(w, wordle.make_guess(w)) for w in reversed(worst_guesses))
     logger.info("calculated global worst solve for word %s (%d guesses) in %s: %s", worst_word, len(worst_guesses), g_elapsed, colored_worst_guesses)
