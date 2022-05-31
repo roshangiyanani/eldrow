@@ -4,7 +4,7 @@ import logging
 from multiprocessing import Pool
 from pathlib import Path
 from time import perf_counter_ns
-from typing import Set, List, Mapping, Dict, Optional
+from typing import Set, List, Mapping, Dict, Optional, Tuple
 
 from wordle.wordle import Wordle, CharResult
 from wordle.lib import colored_text
@@ -21,29 +21,38 @@ def build_arg_parser() -> ArgumentParser:
     parser.add_argument("-p", "--processes", type=int, help="run across p processes")
     return parser
 
-def worst_solve(wordle: Wordle, possibilities: Set[str], filters: Mapping[str, Set[str]]) -> List[str]:
+def worst_solve(wordle: Wordle, possibilities: Set[str], filters: Optional[Mapping[str, Set[str]]] = None) -> List[str]:
     assert len(possibilities) != 0
     if len(possibilities) == 1:
         word = next(iter(possibilities))
         assert CharResult.all_correct(wordle.make_guess(word))
         return [word]
 
-    worst_guesses: List[str] = list()
+    modifieds: List[Tuple[str, Wordle, Set[str]]] = list()
+    sub_filters: Dict[str, Set[str]] = dict()
     for possibility in possibilities:
         modified_wordle, result = wordle.copy_make_guess(possibility)
         if CharResult.all_correct(result):
-            # this can't be the worst solve, since there's at least one other word to try first
-            continue
+            modified_possibilities = {}
+        else:
+            if filters is not None:
+                filter = filters[possibility]
+                modified_possibilities = {word for word in possibilities if word in filter and modified_wordle.is_legal(word)}
+            else:
+                modified_possibilities = {word for word in possibilities if modified_wordle.is_legal(word)}
+            modifieds.append((possibility, modified_wordle, modified_possibilities))
+        sub_filters[possibility] = modified_possibilities
 
-        filter = filters[possibility]
-        modified_possibilities = {word for word in possibilities if word in filter and modified_wordle.is_legal(word)}
-        if len(modified_possibilities) + 1 <= len(worst_guesses):
+    modifieds.sort(key=lambda m: len(m[2]), reverse=True)
+    worst_guesses: List[str] = list()
+    for word, m_wordle, m_possibilities in modifieds:
+        if len(m_possibilities) + 1 <= len(worst_guesses):
             # this can only match the worst solve, since there's not enough words to try
             continue
 
-        solve = worst_solve(modified_wordle, modified_possibilities, filters)
+        solve = worst_solve(m_wordle, m_possibilities, sub_filters)
         if len(worst_guesses) < len(solve) + 1:
-            solve.append(possibility)
+            solve.append(word)
             worst_guesses = solve
 
     return worst_guesses
@@ -53,16 +62,7 @@ def run_worst_solve(words: Set[str], word: str) -> List[str]:
     wordle = Wordle(word, True)
 
     start = perf_counter_ns()
-    filters: Dict[str, Set[str]] = dict()
-    for m_word in words:
-        modified_wordle, _ = wordle.copy_make_guess(m_word)
-        filters[m_word] = {w for w in words if modified_wordle.is_legal(w)}
-    end = perf_counter_ns()
-    elapsed = timedelta(microseconds=(end - start) / 1000)
-    logger.debug("built filter for word %s in %s", word, elapsed)
-
-    start = perf_counter_ns()
-    ws = worst_solve(wordle, words, filters)
+    ws = worst_solve(wordle, words)
     end = perf_counter_ns()
     elapsed = timedelta(microseconds=(end - start) / 1000)
 
