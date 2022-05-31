@@ -1,19 +1,18 @@
 from datetime import timedelta
 import logging
 from multiprocessing import Pool
-from copy import deepcopy
 from pathlib import Path
 from time import perf_counter_ns
-from typing import Set, List
+from typing import Set, List, Mapping, Dict
 
 from wordle.wordle import Wordle, CharResult
 from wordle.lib import colored_text
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-def worst_solve(wordle: Wordle, possibilities: Set[str]) -> List[str]:
+def worst_solve(wordle: Wordle, possibilities: Set[str], filters: Mapping[str, Set[str]]) -> List[str]:
     assert len(possibilities) != 0
     if len(possibilities) == 1:
         word = next(iter(possibilities))
@@ -27,12 +26,13 @@ def worst_solve(wordle: Wordle, possibilities: Set[str]) -> List[str]:
             # this can't be the worst solve, since there's at least one other word to try first
             continue
 
-        modified_possibilities = {word for word in possibilities if modified_wordle.is_legal(word)}
+        filter = filters[possibility]
+        modified_possibilities = {word for word in possibilities if word in filter and modified_wordle.is_legal(word)}
         if len(modified_possibilities) + 1 <= len(worst_guesses):
             # this can only match the worst solve, since there's not enough words to try
             continue
 
-        solve = worst_solve(modified_wordle, modified_possibilities)
+        solve = worst_solve(modified_wordle, modified_possibilities, filters)
         if len(worst_guesses) < len(solve) + 1:
             solve.append(possibility)
             worst_guesses = solve
@@ -44,7 +44,16 @@ def run_worst_solve(words: Set[str], word: str) -> List[str]:
     wordle = Wordle(word, True)
 
     start = perf_counter_ns()
-    ws = worst_solve(wordle, set(words))
+    filters: Dict[str, Set[str]] = dict()
+    for word in words:
+        modified_wordle, _ = wordle.copy_make_guess(word)
+        filters[word] = {w for w in words if modified_wordle.is_legal(w)}
+    end = perf_counter_ns()
+    elapsed = timedelta(microseconds=(end - start) / 1000)
+    logger.debug("built filter for word %s in %s", word, elapsed)
+
+    start = perf_counter_ns()
+    ws = worst_solve(wordle, words, filters)
     end = perf_counter_ns()
     elapsed = timedelta(microseconds=(end - start) / 1000)
 
