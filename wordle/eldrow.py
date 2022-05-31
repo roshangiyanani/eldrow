@@ -1,9 +1,10 @@
+from argparse import ArgumentParser
 from datetime import timedelta
 import logging
 from multiprocessing import Pool
 from pathlib import Path
 from time import perf_counter_ns
-from typing import Set, List, Mapping, Dict
+from typing import Set, List, Mapping, Dict, Optional
 
 from wordle.wordle import Wordle, CharResult
 from wordle.lib import colored_text
@@ -11,6 +12,13 @@ from wordle.lib import colored_text
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+def build_arg_parser() -> ArgumentParser:
+    parser = ArgumentParser()
+    parser.add_argument("wordlist", type=Path, help="wordlist file")
+    parser.add_argument("-l", "--limit", type=int, help="limit wordlist to l words (randomly selected)")
+    parser.add_argument("-s", "--seed", type=int, help="random number generator seed (useful when limiting")
+    parser.add_argument("-p", "--processes", type=int, help="run across p processes")
+    return parser
 
 def worst_solve(wordle: Wordle, possibilities: Set[str], filters: Mapping[str, Set[str]]) -> List[str]:
     assert len(possibilities) != 0
@@ -67,17 +75,36 @@ if __name__ == "__main__":
 
     from wordle.lib import load_words
 
+    parser = build_arg_parser()
+    args = parser.parse_args()
+    word_path: Path = args.wordlist
+    limit: Optional[int] = args.limit
+    seed: Optional[int] = args.seed
+    processes: Optional[int] = args.processes
 
-    word_path = Path("./wordlist.csv")
     words = load_words(word_path)
-    random.seed(9)
-    words = set(random.sample(words, 200))
-    logging.info(f"loaded {len(words)} words from {word_path}")
+    logger.info(f"loaded {len(words)} words from {word_path}")
+
+    if limit is not None:
+        if seed is not None:
+            random.seed(seed)
+            logger.info(f"set seed to %d", seed)
+
+        words = random.sample(words, limit)
+        logger.info("randomly sampled %d words", limit)
+    words = set(words)
 
     g_start = perf_counter_ns()
 
-    with Pool(processes=4) as pool:
-        results = pool.starmap(run_worst_solve, [(words, w) for w in words])
+    if not processes or processes == 1:
+        results = list()
+        for word in words:
+            result = run_worst_solve(words, word)
+            results.append(result)
+    else:
+        logger.info("running across %d processes", processes)
+        with Pool(processes=processes) as pool:
+            results = pool.starmap(run_worst_solve, [(words, w) for w in words])
 
     g_end = perf_counter_ns()
     g_elapsed = timedelta(microseconds=(g_end-g_start) / 1000)
