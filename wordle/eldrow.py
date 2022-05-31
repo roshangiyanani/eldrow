@@ -54,9 +54,9 @@ def run_worst_solve(words: Set[str], word: str) -> List[str]:
 
     start = perf_counter_ns()
     filters: Dict[str, Set[str]] = dict()
-    for word in words:
-        modified_wordle, _ = wordle.copy_make_guess(word)
-        filters[word] = {w for w in words if modified_wordle.is_legal(w)}
+    for m_word in words:
+        modified_wordle, _ = wordle.copy_make_guess(m_word)
+        filters[m_word] = {w for w in words if modified_wordle.is_legal(w)}
     end = perf_counter_ns()
     elapsed = timedelta(microseconds=(end - start) / 1000)
     logger.debug("built filter for word %s in %s", word, elapsed)
